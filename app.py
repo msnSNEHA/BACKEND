@@ -8,7 +8,7 @@ app = Flask(__name__)
 
 DATA_FILE = 'data.json'
 HTR_FILE = 'htr_counter.txt'
-MANAGER_EMAIL = 'manager@example.com'  # Placeholder
+MANAGER_EMAIL = 'snehamani7310@gmail.com'  # Placeholder
 
 # Initialize counter file
 if not os.path.exists(HTR_FILE):
@@ -94,3 +94,4 @@ def send_email_to_manager(link):
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
+
