@@ -88,10 +88,26 @@ def save_all_data(data):
         json.dump(data, f, indent=2)
 
 def send_email_to_manager(link):
-    # Placeholder: printing instead of sending real email
-    print(f"EMAIL TO {MANAGER_EMAIL}: Click to review HTR submission → {link}")
-    # You can integrate real SMTP email sending here later
+    sender_email = "snehmani7310@gmail.com"  # Replace with your Gmail address
+    sender_password = "Sneha@2001"  # Replace with your Gmail app password
+    subject = "New HTR Form Submission"
+    body = f"A new form has been submitted.\n\nReview it here: {link}"
+
+    msg = MIMEText(body)
+    msg["Subject"] = subject
+    msg["From"] = sender_email
+    msg["To"] = MANAGER_EMAIL
+
+    try:
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+            server.login(sender_email, sender_password)
+            server.send_message(msg)
+        print(f"✅ Email sent to {snehamani7310@gmail.com}")
+    except Exception as e:
+        print(f"❌ Error sending email: {e}")
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
+
 
