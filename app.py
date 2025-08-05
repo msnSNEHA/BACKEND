@@ -8,7 +8,7 @@ app = Flask(__name__)
 
 DATA_FILE = 'data.json'
 HTR_FILE = 'htr_counter.txt'
-MANAGER_EMAIL = 'snehamani7310@gmail.com'  # Placeholder
+MANAGER_EMAIL = 'msn@juniper.net'  # Placeholder
 
 # Initialize counter file
 if not os.path.exists(HTR_FILE):
@@ -102,12 +102,13 @@ def send_email_to_manager(link):
         with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
             server.login(sender_email, sender_password)
             server.send_message(msg)
-        print(f"✅ Email sent to {snehamani7310@gmail.com}")
+        print(f"✅ Email sent to {msn@juniper.net}")
     except Exception as e:
         print(f"❌ Error sending email: {e}")
 
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
+
 
 
