@@ -1,0 +1,96 @@
+from flask import Flask, request, jsonify, render_template_string, redirect
+import json
+import os
+import smtplib
+from email.mime.text import MIMEText
+
+app = Flask(__name__)
+
+DATA_FILE = 'data.json'
+HTR_FILE = 'htr_counter.txt'
+MANAGER_EMAIL = 'manager@example.com'  # Placeholder
+
+# Initialize counter file
+if not os.path.exists(HTR_FILE):
+    with open(HTR_FILE, 'w') as f:
+        f.write('HTR05237')
+
+# Load stored submissions
+if not os.path.exists(DATA_FILE):
+    with open(DATA_FILE, 'w') as f:
+        json.dump({}, f)
+
+def get_next_htr_number():
+    with open(HTR_FILE, 'r+') as f:
+        last_htr = f.read().strip()
+        num = int(last_htr[3:]) + 1
+        next_htr = f"HTR{num:05d}"
+        f.seek(0)
+        f.write(next_htr)
+        f.truncate()
+    return next_htr
+
+@app.route("/submit", methods=["POST"])
+def submit_form():
+    form_data = request.form.to_dict()
+    submission_id = str(len(load_data()) + 1)
+
+    save_submission(submission_id, form_data)
+
+    # Generate review link
+    review_link = f"{request.host_url}review/{submission_id}"
+    
+    # Send email to manager (placeholder function)
+    send_email_to_manager(review_link)
+
+    return "Form submitted successfully. Manager will review it soon."
+
+@app.route("/review/<submission_id>")
+def review(submission_id):
+    data = load_data().get(submission_id)
+    if not data:
+        return "Submission not found."
+
+    html = f"""
+    <h2>HTR Review for Submission {submission_id}</h2>
+    <ul>
+        {''.join(f'<li><strong>{k}</strong>: {v}</li>' for k, v in data.items())}
+    </ul>
+    <form action="/generate_htr/{submission_id}" method="POST">
+        <button type="submit">Generate HTR Number</button>
+    </form>
+    """
+    return render_template_string(html)
+
+@app.route("/generate_htr/<submission_id>", methods=["POST"])
+def generate_htr(submission_id):
+    data = load_data()
+    if submission_id not in data:
+        return "Submission not found."
+
+    htr_number = get_next_htr_number()
+    data[submission_id]["HTR Number"] = htr_number
+    save_all_data(data)
+
+    return f"<h2>HTR Number Generated: {htr_number}</h2><br><a href='/review/{submission_id}'>Back</a>"
+
+def load_data():
+    with open(DATA_FILE, 'r') as f:
+        return json.load(f)
+
+def save_submission(submission_id, data):
+    all_data = load_data()
+    all_data[submission_id] = data
+    save_all_data(all_data)
+
+def save_all_data(data):
+    with open(DATA_FILE, 'w') as f:
+        json.dump(data, f, indent=2)
+
+def send_email_to_manager(link):
+    # Placeholder: printing instead of sending real email
+    print(f"EMAIL TO {MANAGER_EMAIL}: Click to review HTR submission → {link}")
+    # You can integrate real SMTP email sending here later
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
