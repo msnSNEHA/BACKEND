@@ -1,23 +1,19 @@
-from flask import Flask, request, jsonify, render_template_string
+from flask import Flask, request, jsonify, render_template_string, redirect
 import json
 import os
-import smtplib
-from email.mime.text import MIMEText
-import pandas as pd
 
 app = Flask(__name__)
 
 DATA_FILE = 'data.json'
 HTR_FILE = 'htr_counter.txt'
-EXCEL_FILE = 'DATA.xlsx'  # Relative path (good for Render)
-MANAGER_EMAIL = 'msn@juniper.net'  # Replace with actual manager email
+MANAGER_EMAIL = 'msn@juniper.net'  # Change this if needed
 
-# Initialize counter file if not exists
+# Initialize counter file
 if not os.path.exists(HTR_FILE):
     with open(HTR_FILE, 'w') as f:
         f.write('HTR05237')
 
-# Initialize JSON data file if not exists
+# Load stored submissions
 if not os.path.exists(DATA_FILE):
     with open(DATA_FILE, 'w') as f:
         json.dump({}, f)
@@ -38,11 +34,13 @@ def submit_form():
     submission_id = str(len(load_data()) + 1)
 
     save_submission(submission_id, form_data)
-    append_to_excel(form_data)
 
+    # Generate review link
     review_link = f"{request.host_url}review/{submission_id}"
-    send_email_to_manager(review_link)
 
+    # Disable email for now — you can re-enable later
+    print(f"✅ Form submitted. Review link: {review_link}")
+    
     return "Form submitted successfully. Manager will review it soon."
 
 @app.route("/review/<submission_id>")
@@ -72,23 +70,7 @@ def generate_htr(submission_id):
     data[submission_id]["HTR Number"] = htr_number
     save_all_data(data)
 
-    user_email = data[submission_id].get("requestor_email")
-    if user_email:
-        send_notification_to_user(user_email, htr_number)
-
-    return f"""
-    <h2>HTR Number Generated: {htr_number}</h2><br>
-    <a href='/review/{submission_id}'>Back</a>
-    """
-
-def append_to_excel(form_data):
-    new_df = pd.DataFrame([form_data])
-    if os.path.exists(EXCEL_FILE):
-        existing_df = pd.read_excel(EXCEL_FILE)
-        combined_df = pd.concat([existing_df, new_df], ignore_index=True)
-        combined_df.to_excel(EXCEL_FILE, index=False)
-    else:
-        new_df.to_excel(EXCEL_FILE, index=False)
+    return f"<h2>HTR Number Generated: {htr_number}</h2><br><a href='/review/{submission_id}'>Back</a>"
 
 def load_data():
     with open(DATA_FILE, 'r') as f:
@@ -103,42 +85,24 @@ def save_all_data(data):
     with open(DATA_FILE, 'w') as f:
         json.dump(data, f, indent=2)
 
-def send_email_to_manager(link):
-    sender_email = os.environ.get("SENDER_EMAIL")
-    sender_password = os.environ.get("SENDER_PASSWORD")
+# (Optional) Enable this later when you're ready to email from server
+# def send_email_to_manager(link):
+#     sender_email = "YOUR_EMAIL@gmail.com"
+#     sender_password = "YOUR_APP_PASSWORD"
+#     subject = "New HTR Form Submission"
+#     body = f"A new form has been submitted.\n\nReview it here: {link}"
+#     msg = MIMEText(body)
+#     msg["Subject"] = subject
+#     msg["From"] = sender_email
+#     msg["To"] = MANAGER_EMAIL
+#     try:
+#         with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+#             server.login(sender_email, sender_password)
+#             server.send_message(msg)
+#         print("✅ Email sent.")
+#     except Exception as e:
+#         print(f"❌ Error sending email: {e}")
 
-    subject = "New HTR Form Submission"
-    body = f"A new form has been submitted.\n\nReview it here: {link}"
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
 
-    msg = MIMEText(body)
-    msg["Subject"] = subject
-    msg["From"] = sender_email
-    msg["To"] = MANAGER_EMAIL
-
-    try:
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-            server.login(sender_email, sender_password)
-            server.send_message(msg)
-        print(f"✅ Email sent to {MANAGER_EMAIL}")
-    except Exception as e:
-        print(f"❌ Error sending email: {e}")
-
-def send_notification_to_user(user_email, htr_number):
-    sender_email = os.environ.get("SENDER_EMAIL")
-    sender_password = os.environ.get("SENDER_PASSWORD")
-
-    subject = "HTR Request Approved"
-    body = f"The manager ({MANAGER_EMAIL}) has approved your request.\nYour HTR Number is: {htr_number}"
-
-    msg = MIMEText(body)
-    msg["Subject"] = subject
-    msg["From"] = sender_email
-    msg["To"] = user_email
-
-    try:
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-            server.login(sender_email, sender_password)
-            server.send_message(msg)
-        print(f"✅ Notification sent to user at {user_email}")
-    except Exception as e:
-        print(f"❌ Failed to send notification email: {e}")
