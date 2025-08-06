@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template_string, redirect
+from flask import Flask, request, jsonify, render_template_string
 import json
 import os
 import smtplib
@@ -9,8 +9,7 @@ app = Flask(__name__)
 
 DATA_FILE = 'data.json'
 HTR_FILE = 'htr_counter.txt'
-# Use your exact absolute path for the Excel file (use raw string r'...' to avoid escaping issues)
-EXCEL_FILE = r'C:\Users\sneha\Downloads\HTR_CODE\HTR-BACKEND\DATA.xlsx'
+EXCEL_FILE = 'DATA.xlsx'  # Relative path (good for Render)
 MANAGER_EMAIL = 'msn@juniper.net'  # Replace with actual manager email
 
 # Initialize counter file if not exists
@@ -39,14 +38,9 @@ def submit_form():
     submission_id = str(len(load_data()) + 1)
 
     save_submission(submission_id, form_data)
-
-    # Append submitted data as a row in your local Excel file
     append_to_excel(form_data)
 
-    # Generate review link
     review_link = f"{request.host_url}review/{submission_id}"
-
-    # Notify manager by email
     send_email_to_manager(review_link)
 
     return "Form submitted successfully. Manager will review it soon."
@@ -78,7 +72,6 @@ def generate_htr(submission_id):
     data[submission_id]["HTR Number"] = htr_number
     save_all_data(data)
 
-    # Send notification email to user who submitted form
     user_email = data[submission_id].get("requestor_email")
     if user_email:
         send_notification_to_user(user_email, htr_number)
@@ -91,13 +84,10 @@ def generate_htr(submission_id):
 def append_to_excel(form_data):
     new_df = pd.DataFrame([form_data])
     if os.path.exists(EXCEL_FILE):
-        # Read existing file
         existing_df = pd.read_excel(EXCEL_FILE)
-        # Append new row, align columns
         combined_df = pd.concat([existing_df, new_df], ignore_index=True)
         combined_df.to_excel(EXCEL_FILE, index=False)
     else:
-        # Create new Excel file with headers
         new_df.to_excel(EXCEL_FILE, index=False)
 
 def load_data():
@@ -114,8 +104,9 @@ def save_all_data(data):
         json.dump(data, f, indent=2)
 
 def send_email_to_manager(link):
-    sender_email = "snehmani7310@gmail.com"  # Replace with your email
-    sender_password = "Sneha@2001"  # Replace with your email app password
+    sender_email = os.environ.get("SENDER_EMAIL")
+    sender_password = os.environ.get("SENDER_PASSWORD")
+
     subject = "New HTR Form Submission"
     body = f"A new form has been submitted.\n\nReview it here: {link}"
 
@@ -133,8 +124,9 @@ def send_email_to_manager(link):
         print(f"❌ Error sending email: {e}")
 
 def send_notification_to_user(user_email, htr_number):
-    sender_email = "snehmani7310@gmail.com"  # Replace with your email
-    sender_password = "Sneha@2001"  # Replace with your email app password
+    sender_email = os.environ.get("SENDER_EMAIL")
+    sender_password = os.environ.get("SENDER_PASSWORD")
+
     subject = "HTR Request Approved"
     body = f"The manager ({MANAGER_EMAIL}) has approved your request.\nYour HTR Number is: {htr_number}"
 
@@ -150,6 +142,3 @@ def send_notification_to_user(user_email, htr_number):
         print(f"✅ Notification sent to user at {user_email}")
     except Exception as e:
         print(f"❌ Failed to send notification email: {e}")
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
